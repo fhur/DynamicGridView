@@ -14,7 +14,6 @@ public class TestActivity extends Activity {
 
     private GridView gridView;
     private TestAdapter adapter;
-    private DynamicGridController dynamicGridController;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -29,9 +28,7 @@ public class TestActivity extends Activity {
 
         gridView = (GridView)findViewById(R.id.grid);
         gridView.setAdapter(adapter);
-        gridView.setNumColumns(4);
-
-        dynamicGridController = new DynamicGridController(gridView, adapter);
+        gridView.setNumColumns(3);
     }
 
 
@@ -44,7 +41,7 @@ public class TestActivity extends Activity {
             textView.setText("\n\n"+getItem(position)+"\n\n");
 
             int r = Integer.parseInt(getItem(position));
-            textView.setBackgroundColor(Color.rgb((r*10)%255, (r*10)%255, (r*10)%255));
+            textView.setBackgroundColor(Color.rgb((r*2)%255, (r*5)%255, (r*10)%255));
             return textView;
         }
     }
