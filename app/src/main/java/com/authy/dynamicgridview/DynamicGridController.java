@@ -106,14 +106,9 @@ public class DynamicGridController implements AdapterView.OnItemLongClickListene
         dragStartPos = pos;
         dragStartEvent = event;
 
-        int[] loc = new int[2];
-        v.getLocationOnScreen(loc);
-        int registrationX = (int) (event.getRawX() - loc[0]);
-        int registrationY = (int) (event.getRawY() - loc[1]);
-
         v.setVisibility(View.INVISIBLE);
 
-        dragView = new DragView(context, v, registrationX, registrationY);
+        dragView = new DragView(context, v);
         dragView.show(v.getWindowToken(), (int)event.getRawX(), (int)event.getRawY());
 
         // call the drag listener => notify that a drag operation has started

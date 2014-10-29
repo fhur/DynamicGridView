@@ -19,6 +19,7 @@
 
 package com.authy.dynamicgridview;
 
+import android.annotation.SuppressLint;
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
@@ -36,18 +37,11 @@ import android.view.WindowManager;
  * A DragView is a special view used by a DragController. During a drag operation, what is actually moving
  * on the screen is a DragView. A DragView is constructed using a bitmap of the view the user really
  * wants to move.
- *
  */
+@SuppressLint("ViewConstructor")
 public class DragView extends View
 {
-    // Number of pixels to add to the dragged item for scaling.  Should be even for pixel alignment.
-    private static final int DRAG_SCALE = 0;   // In Launcher, value is 40
-
     private Bitmap mBitmap;
-    private int mRegistrationX;
-    private int mRegistrationY;
-
-    private float mAnimationScale = 0.9f;
 
     private Paint dragViewPaint;
 
@@ -62,19 +56,13 @@ public class DragView extends View
      *
      * @param context A context
      * @param view The view that we're dragging around.  We scale it up when we draw it.
-     * @param registrationX The x coordinate of the registration point.
-     * @param registrationY The y coordinate of the registration point.
      */
-    public DragView(Context context, View view, int registrationX, int registrationY) {
+    public DragView(Context context, View view) {
         super(context);
 
         mWindowManager = (WindowManager) context.getSystemService(Context.WINDOW_SERVICE);
 
         mBitmap = getBitmapFromView(view);
-
-        // The point in our scaled bitmap that the touch events are located
-        mRegistrationX = registrationX + (DRAG_SCALE / 2);
-        mRegistrationY = registrationY + (DRAG_SCALE / 2);
 
         dragViewPaint = new Paint();
         dragViewPaint.setColor(Color.RED);
@@ -157,21 +145,30 @@ public class DragView extends View
      * @param touchY the y coordinate the user touched in screen coordinates
      */
     public void move(int touchX, int touchY) {
-        // This is what was done in the Launcher code.
+        // update the X and Y position
         WindowManager.LayoutParams lp = mLayoutParams;
         lp.x = touchX - mBitmap.getWidth()/2;
         lp.y = touchY - mBitmap.getHeight()/2;
         mWindowManager.updateViewLayout(this, lp);
     }
 
+    /**
+     * @return the X center of this view as it is being dragged
+     */
     public int getDragX(){
         return mLayoutParams.x;
     }
 
+    /**
+     * @return the Y center of this view as it is being dragged
+     */
     public int getDragY(){
         return mLayoutParams.y;
     }
 
+    /**
+     * Removes the drag view
+     */
     public void remove() {
         mWindowManager.removeView(this);
     }
