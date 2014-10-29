@@ -25,7 +25,6 @@ public class DynamicGridController implements AdapterView.OnItemLongClickListene
     private Context context;
     private GridView gridView;
     private DragView dragView;
-    private SwapHistory swapHistory;
     private DynamicGridAdapter<?> adapter;
 
     /**
@@ -68,7 +67,7 @@ public class DynamicGridController implements AdapterView.OnItemLongClickListene
     public boolean onTouch(View v, MotionEvent event) {
         lastMotionEvent = event;
 
-        int action = event.getAction();
+        int action = event.getAction() & MotionEvent.ACTION_MASK;
 
         if(dragging && action == MotionEvent.ACTION_UP){
             dragging = false;
@@ -76,12 +75,10 @@ public class DynamicGridController implements AdapterView.OnItemLongClickListene
         }
         else if(dragging && action == MotionEvent.ACTION_MOVE){
             updateDragView(event, dragging);
-        }
-        else if(dragging && action == MotionEvent.ACTION_POINTER_DOWN){
-            scrollIfNeeded(event);
+            return false;
         }
 
-        return false;
+        return gridView.onTouchEvent(event);
     }
 
     @Override
@@ -95,6 +92,7 @@ public class DynamicGridController implements AdapterView.OnItemLongClickListene
 
     /**
      * Starts dragging a view at the given position
+     *
      * @param pos the position of that view in the grid
      * @param v the view that is being dragged around
      * @param event the motion event that triggered the drag
@@ -117,9 +115,10 @@ public class DynamicGridController implements AdapterView.OnItemLongClickListene
 
     /**
      * Stops the current drag event. The fundamental difference between {@code stopDragging} and
-     * {@link #cancelDragOperation(int, android.view.MotionEvent) cancelDragOperation} is that
-     * {@code stopDragging}'s changes should be persisted while {@code cancelDragOperation}'s
+     * {@link #cancelDragOperation(int, android.view.MotionEvent) cancelDragging} is that
+     * {@code stopDragging}'s changes should be persisted while {@code cancelDragging}'s
      * changes should not (because the operation was cancelled
+     *
      * @param initialPosition the position where the drag operation was started
      * @param event a motion event
      */
@@ -142,8 +141,8 @@ public class DynamicGridController implements AdapterView.OnItemLongClickListene
     }
 
     /**
-     * TODO
      * Cancels the current drag operation returning all dragged elements to their original place.
+     *
      * @param originatingPosition the position in the adapter where the drag operation was started
      * @param event the motion event that was fired when the drag operation occured
      */
@@ -156,6 +155,7 @@ public class DynamicGridController implements AdapterView.OnItemLongClickListene
 
     /**
      * Called when the users is moving the dragged view around
+     *
      * @param event a motion event
      * @param dragging if the user is dragging
      */
@@ -267,20 +267,44 @@ public class DynamicGridController implements AdapterView.OnItemLongClickListene
         return gridView.getChildAt(index);
     }
 
-    public interface OnDragListener{
-        public void onDragStarted(int pos);
-        public void onDragged(int pos, MotionEvent initial, MotionEvent current);
-    }
-
-    public interface OnDropListener{
-        public void onDrop(int from, int to);
-    }
-
     private static void log(String format, Object... args){
         String formatted = String.format(format, args);
         Log.d(TAG, formatted);
     }
 
+    public interface OnDragListener {
+
+        /**
+         * Called when a drag operation is started
+         *
+         * @param pos the position where the drag operation was started
+         */
+        public void onDragStarted(int pos);
+
+        /**
+         * This method is called while the user is dragging the view around
+         *
+         * @param initalPosition the position in the adapter where the drag operation was started
+         * @param initial the initial motion event that triggered the drag operation
+         * @param current the current motion event
+         */
+        public void onDragged(int initalPosition, MotionEvent initial, MotionEvent current);
+    }
+
+    public interface OnDropListener {
+
+        /**
+         * Called when a dragged item is dropped
+         *
+         * @param from the original position where the item drag was started
+         * @param to the final position where the item was dropped
+         */
+        public void onDrop(int from, int to);
+    }
+
+    /**
+     * Implementation of OnDragListener that simply logs the methods
+     */
     public static class DefOnDragListener implements OnDragListener{
         @Override
         public void onDragStarted(int pos) {
@@ -293,6 +317,9 @@ public class DynamicGridController implements AdapterView.OnItemLongClickListene
         }
     }
 
+    /**
+     * Implementation of OnDropListener that simply logs the methods
+     */
     public static class DefOnDropListener implements OnDropListener {
         @Override
         public void onDrop(int from, int to) {
