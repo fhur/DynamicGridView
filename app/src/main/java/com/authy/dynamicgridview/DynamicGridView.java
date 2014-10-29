@@ -13,8 +13,11 @@ import android.widget.ListAdapter;
 
 /**
  * Created by fernandinho on 10/29/14.
+ *
+ * Important: To properly use the DynamicGridView you must use the ViewHolder patterns in your
+ * adapter. Not doing so wil result in weird visibility bugs (views disappearing/re-appearing)
  */
-public class DynamicGridView extends GridView implements SwapHistory.Swapper, AdapterView.OnItemLongClickListener{
+public class DynamicGridView extends GridView implements AdapterView.OnItemLongClickListener {
 
     public static final String TAG = "DynamicGridView";
 
@@ -44,8 +47,19 @@ public class DynamicGridView extends GridView implements SwapHistory.Swapper, Ad
      */
     private int dragStartPos;
 
+    /**
+     * The last position in the adapter where the cursor was on top while dragging
+     */
     private int lastOverlayedPos;
 
+    /**
+     * The last view where the cursor was on top while dragging
+     */
+    private View lastOverlayedView;
+
+    /**
+     * The speed at which to scroll
+     */
     private int scrollSpeed;
 
     private OnDragListener onDragListener;
@@ -61,7 +75,12 @@ public class DynamicGridView extends GridView implements SwapHistory.Swapper, Ad
         init();
     }
 
-    public void init(){
+    public DynamicGridView(Context context, AttributeSet attrs, int defStyle) {
+        super(context, attrs, defStyle);
+        init();
+    }
+
+    private void init() {
         onDragListener = new DefOnDragListener();
         onDropListener = new DefOnDropListener();
         scrollSpeed = (int)(SCROLL_SPEED * getResources().getDisplayMetrics().density + 0.5f);
@@ -116,7 +135,7 @@ public class DynamicGridView extends GridView implements SwapHistory.Swapper, Ad
         dragStartPos = pos;     // set the position where the drag started
         dragStartEvent = event; // set the event that started the drag
         lastOverlayedPos = pos; // update the last overlayed position with the initial drag position
-
+        lastOverlayedView = v;
         hide(v);
 
         dragView = new DragView(getContext(), v);
@@ -124,6 +143,15 @@ public class DynamicGridView extends GridView implements SwapHistory.Swapper, Ad
 
         // call the drag listener => notify that a drag operation has started
         onDragListener.onDragStarted(pos);
+    }
+
+    /**
+     * Starts dragging a view at the given position. Equivalent to
+     * {@link #startDragging(int, android.view.View, android.view.MotionEvent)} with MotionEvent
+     * set to {@link #getLastMotionEvent()}
+     */
+    public void startDragging(int pos, View v) {
+        startDragging(pos, v, lastMotionEvent);
     }
 
     /**
@@ -143,9 +171,7 @@ public class DynamicGridView extends GridView implements SwapHistory.Swapper, Ad
         }
         else{
             View view = getChildAt(finalPosition - getFirstVisiblePosition());
-            if(view != null){
-                view.setVisibility(View.VISIBLE);
-            }
+            show(view);
 
             // do not call swap here as the swap is already done in updateDragView
             // notify the listener => an item has been dropped
@@ -154,7 +180,22 @@ public class DynamicGridView extends GridView implements SwapHistory.Swapper, Ad
     }
 
     private void hide(View v){
-        if(v != null) v.setVisibility(INVISIBLE);
+        if (v != null) {
+            setAlphaForView(v, 0);
+        }
+    }
+
+    private void show(View v) {
+        if (v != null) {
+            setAlphaForView(v, 1);
+        }
+    }
+
+    private void setAlphaForView(View v, float alpha) {
+        AlphaAnimation animation = new AlphaAnimation(alpha, alpha);
+        animation.setDuration(0);
+        animation.setFillAfter(true);
+        v.startAnimation(animation);
     }
 
     /**
@@ -166,7 +207,7 @@ public class DynamicGridView extends GridView implements SwapHistory.Swapper, Ad
     public void cancelDragging(int originatingPosition, MotionEvent event){
         log("Cancelled drag operation originated at " + originatingPosition);
         View view = getChildAt(dragStartPos);
-        view.setVisibility(View.VISIBLE);
+        show(lastOverlayedView);
         dragging = false;
     }
 
@@ -183,19 +224,24 @@ public class DynamicGridView extends GridView implements SwapHistory.Swapper, Ad
             // check
             scrollIfNeeded(event);
 
-            // obtain the position that is being overlayed by the dragView and check
+            // obtain the position that is being overlaid by the dragView and check
             // if it has changed. If a change has indeed occurred swap the items.
             int currentOverlayedPos = findClosestViewIndex(event);
             if(currentOverlayedPos != INVALID_POSITION && currentOverlayedPos != lastOverlayedPos) {
+
+                View viewPrev = getChildAt(lastOverlayedPos - getFirstVisiblePosition());
+                show(viewPrev);
+
+                View viewCurr = getChildAt(currentOverlayedPos - getFirstVisiblePosition());
+                hide(viewCurr);
+
                 swapItems(lastOverlayedPos, currentOverlayedPos);
                 lastOverlayedPos = currentOverlayedPos;
+                lastOverlayedView = viewCurr;
+
+                // call listeners
+                onDragListener.onDragged(dragStartPos, dragStartEvent, event);
             }
-
-            View view = getChildAt(currentOverlayedPos - getFirstVisiblePosition());
-            hide(view);
-
-            // call listeners
-            onDragListener.onDragged(dragStartPos, dragStartEvent, event);
         }
     }
 
@@ -216,7 +262,6 @@ public class DynamicGridView extends GridView implements SwapHistory.Swapper, Ad
      * @param pos1 the first item's position in the adapter
      * @param pos2 the second item's position in the adapter
      */
-    @Override
     public void swapItems(int pos1, int pos2){
         getAdapter().swap(pos1, pos2);
     }
@@ -289,6 +334,14 @@ public class DynamicGridView extends GridView implements SwapHistory.Swapper, Ad
      */
     public MotionEvent getLastMotionEvent() {
         return lastMotionEvent;
+    }
+
+    public void setOnDropListener(OnDropListener onDropListener) {
+        this.onDropListener = onDropListener;
+    }
+
+    public void setOnDragListener(OnDragListener onDragListener) {
+        this.onDragListener = onDragListener;
     }
 
     private static void log(String format, Object... args){
