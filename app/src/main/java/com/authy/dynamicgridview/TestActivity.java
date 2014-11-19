@@ -35,9 +35,19 @@ public class TestActivity extends Activity {
     public class TestAdapter extends DynamicGridAdapter<String>{
 
         @Override
-        public View getView(int position, View convertView, ViewGroup parent) {
-            TextView textView = new TextView(getApplicationContext());
-            textView.setGravity(Gravity.CENTER);
+        public View getViewItem(int position, View convertView, ViewGroup parent) {
+
+            TextView textView;
+            if(convertView == null){
+
+                textView = new TextView(getApplicationContext());
+                textView.setGravity(Gravity.CENTER);
+
+            }
+            else{
+                textView = (TextView)convertView;
+            }
+
             textView.setText("\n\n"+getItem(position)+"\n\n");
 
             int r = Integer.parseInt(getItem(position));
